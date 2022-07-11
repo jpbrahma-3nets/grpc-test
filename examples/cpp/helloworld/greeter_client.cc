@@ -21,6 +21,12 @@
 #include <string>
 
 #include <grpcpp/grpcpp.h>
+extern "C"{
+#include "wireguard.h"
+}
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 
 #ifdef BAZEL_BUILD
 #include "examples/protos/helloworld.grpc.pb.h"
@@ -67,9 +73,60 @@ class GreeterClient {
     }
   }
 
+  std::string SayHelloAgain(const std::string& user) {
+    // Follows the same pattern as SayHello.
+    HelloRequest request;
+    request.set_name(user);
+    HelloReply reply;
+    ClientContext context;
+
+    // Here we can use the stub's newly available method we just added.
+    Status status = stub_->SayHelloAgain(&context, request, &reply);
+    if (status.ok()) {
+      return reply.message();
+    } else {
+      std::cout << status.error_code() << ": " << status.error_message()
+                << std::endl;
+      return "RPC failed";
+    }
+  }
+
  private:
   std::unique_ptr<Greeter::Stub> stub_;
 };
+
+void list_devices(void)
+{
+	char *device_names, *device_name;
+	size_t len;
+
+	device_names = wg_list_device_names();
+	if (!device_names) {
+		perror("Unable to get device names");
+		exit(1);
+	}
+	wg_for_each_device_name(device_names, device_name, len) {
+		wg_device *device;
+		wg_peer *peer;
+		wg_key_b64_string key;
+
+		if (wg_get_device(&device, device_name) < 0) {
+			perror("Unable to get device");
+			continue;
+		}
+		if (device->flags & WGDEVICE_HAS_PUBLIC_KEY) {
+			wg_key_to_base64(key, device->public_key);
+			printf("%s has public key %s\n", device_name, key);
+		} else
+			printf("%s has no public key\n", device_name);
+		wg_for_each_peer(device, peer) {
+			wg_key_to_base64(key, peer->public_key);
+			printf(" - peer %s\n", key);
+		}
+		wg_free_device(device);
+	}
+	free(device_names);
+}
 
 int main(int argc, char** argv) {
   // Instantiate the client. It requires a channel, out of which the actual RPCs
@@ -104,5 +161,42 @@ int main(int argc, char** argv) {
   std::string reply = greeter.SayHello(user);
   std::cout << "Greeter received: " << reply << std::endl;
 
+  reply = greeter.SayHelloAgain(user);
+  std::cout << "Greeter received: " << reply << std::endl;
+  
+  wg_peer new_peer = {
+	.flags = (wg_peer_flags) (WGPEER_HAS_PUBLIC_KEY | WGPEER_REPLACE_ALLOWEDIPS)
+  };
+  wg_device new_device = {
+	.name = "wgtest0",
+	.flags = (wg_device_flags)(WGDEVICE_HAS_PRIVATE_KEY | WGDEVICE_HAS_LISTEN_PORT),
+	.listen_port = 1234,
+	.first_peer = &new_peer,
+	.last_peer = &new_peer
+  };
+  wg_key temp_private_key;
+
+  wg_generate_private_key(temp_private_key);
+  wg_generate_public_key(new_peer.public_key, temp_private_key);
+  wg_generate_private_key(new_device.private_key);
+
+  if (wg_add_device(new_device.name) < 0) {
+	perror("Unable to add device");
+	exit(1);
+  }
+
+  if (wg_set_device(&new_device) < 0) {
+	perror("Unable to set device");
+	exit(1);
+  }
+
+  list_devices();
+
+/*
+  if (wg_del_device(new_device.name) < 0) {
+	perror("Unable to delete device");
+	exit(1);
+  }
+*/
   return 0;
 }

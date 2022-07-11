@@ -45,12 +45,15 @@ add_custom_command(
 # Include generated *.pb.h files
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 
+#add_library(wireguard wireguard.c)
+
 # hw_grpc_proto
 add_library(hw_grpc_proto
   ${hw_grpc_srcs}
   ${hw_grpc_hdrs}
   ${hw_proto_srcs}
-  ${hw_proto_hdrs})
+  ${hw_proto_hdrs}
+  wireguard.h wireguard.c)
 target_link_libraries(hw_grpc_proto
   ${_REFLECTION}
   ${_GRPC_GRPCPP}
