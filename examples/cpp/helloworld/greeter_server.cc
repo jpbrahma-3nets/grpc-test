@@ -115,9 +115,17 @@ void list_devices(void)
 
 int main(int argc, char** argv) {
 
+  wg_key_b64_string pskey = {'9','H','Z','v','6','Z','K','6',
+                  'O','7','h','k','s','+','S','1','w','a','u','t','x','t',
+                  'w','n','g','7','Y','Q','u','/','R','q','q','3','2','X',
+                  'z','i','T','a','+','y','A','='};
+ 	
   wg_peer new_peer = {
 	.flags = (wg_peer_flags) (WGPEER_HAS_PUBLIC_KEY | WGPEER_REPLACE_ALLOWEDIPS)
   };
+  wg_key_from_base64(new_peer.preshared_key,pskey);
+
+  
   wg_device new_device = {
         .name = "wgtest0s",
         .flags = (wg_device_flags)(WGDEVICE_HAS_PRIVATE_KEY | WGDEVICE_HAS_LISTEN_PORT),
@@ -129,7 +137,7 @@ int main(int argc, char** argv) {
 
   wg_generate_private_key(temp_private_key);
   wg_generate_public_key(new_peer.public_key, temp_private_key);
-  wg_generate_private_key(new_device.private_key);
+//  wg_generate_private_key(new_device.private_key);
 
   if (wg_add_device(new_device.name) < 0) {
 	perror("Unable to add device");
@@ -142,12 +150,12 @@ int main(int argc, char** argv) {
   }
 
   list_devices();
-/*
+
   if (wg_del_device(new_device.name) < 0) {
 	perror("Unable to delete device");
 	exit(1);
   }
-*/
+
   RunServer();
 
   return 0;

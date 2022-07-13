@@ -23,6 +23,8 @@
 #include <grpcpp/grpcpp.h>
 extern "C"{
 #include "wireguard.h"
+#include <netinet/in.h>
+#include <sys/socket.h>
 }
 #include <stdio.h>
 #include <string.h>
@@ -163,23 +165,55 @@ int main(int argc, char** argv) {
 
   reply = greeter.SayHelloAgain(user);
   std::cout << "Greeter received: " << reply << std::endl;
+ 
+  wg_endpoint e;
+  struct sockaddr_in addr;
+  addr.sin_family = AF_INET;
+  addr.sin_port = htons(50051);
+  addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  e.addr4 = addr;
+
+  wg_key peer_key;
+  //wg_key_b64_string pkey = {0};
+  wg_key_b64_string pkey = {'m','2','m','0','3','m','i','J','w','g','e',
+	  'N','v','B','B','1','K','o','P','o','s','g','R','b','A','c','+',
+	  'p','l','+','e','G','f','e','s','4','x','6','K','N','v','l','c','='};
+  wg_key_from_base64(peer_key, pkey);
+
+  wg_key_b64_string pskey = {'9','H','Z','v','6','Z','K','6',
+                  'O','7','h','k','s','+','S','1','w','a','u','t','x','t',
+                  'w','n','g','7','Y','Q','u','/','R','q','q','3','2','X',
+                  'z','i','T','a','+','y','A','='};
   
   wg_peer new_peer = {
-	.flags = (wg_peer_flags) (WGPEER_HAS_PUBLIC_KEY | WGPEER_REPLACE_ALLOWEDIPS)
+	.flags = (wg_peer_flags) (WGPEER_HAS_PUBLIC_KEY | WGPEER_REPLACE_ALLOWEDIPS),
+	.endpoint = e
   };
+  wg_key_from_base64(new_peer.public_key, pkey); 
+  wg_key_from_base64(new_peer.preshared_key,pskey); 
+
   wg_device new_device = {
 	.name = "wgtest0",
 	.flags = (wg_device_flags)(WGDEVICE_HAS_PRIVATE_KEY | WGDEVICE_HAS_LISTEN_PORT),
-	.listen_port = 1234,
+	.listen_port = 12345,
 	.first_peer = &new_peer,
 	.last_peer = &new_peer
   };
-  wg_key temp_private_key;
 
+/*  
+  wg_key temp_private_key;
   wg_generate_private_key(temp_private_key);
   wg_generate_public_key(new_peer.public_key, temp_private_key);
-  wg_generate_private_key(new_device.private_key);
+*/
 
+  wg_key_b64_string key, key2;
+  wg_key_to_base64(key, new_peer.public_key);
+ // printf("peer pub key %s\n", key);
+  
+  wg_generate_private_key(new_device.private_key);
+  wg_key_to_base64(key2, new_device.private_key);
+ // printf("device pri key %s\n", key2);
+  
   if (wg_add_device(new_device.name) < 0) {
 	perror("Unable to add device");
 	exit(1);
@@ -192,11 +226,9 @@ int main(int argc, char** argv) {
 
   list_devices();
 
-/*
   if (wg_del_device(new_device.name) < 0) {
 	perror("Unable to delete device");
 	exit(1);
   }
-*/
   return 0;
 }
