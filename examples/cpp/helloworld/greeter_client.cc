@@ -173,23 +173,27 @@ int main(int argc, char** argv) {
   addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
   e.addr4 = addr;
 
-  wg_key peer_key;
-  //wg_key_b64_string pkey = {0};
-  wg_key_b64_string pkey = {'m','2','m','0','3','m','i','J','w','g','e',
-	  'N','v','B','B','1','K','o','P','o','s','g','R','b','A','c','+',
-	  'p','l','+','e','G','f','e','s','4','x','6','K','N','v','l','c','='};
-  wg_key_from_base64(peer_key, pkey);
+  wg_key_b64_string prkey = {'s','J','l','H','Y','f','9','E','J','k','a','S',
+	  'S','u','X','f','Z','a','s','g','S','T','T','9','r','R','X','j','W',
+	  'G','M','6','L','w','s','Y','J','b','j','l','K','E','c','='};
 
-  wg_key_b64_string pskey = {'9','H','Z','v','6','Z','K','6',
-                  'O','7','h','k','s','+','S','1','w','a','u','t','x','t',
-                  'w','n','g','7','Y','Q','u','/','R','q','q','3','2','X',
-                  'z','i','T','a','+','y','A','='};
+  wg_key_b64_string pskey = {'2','3','/','3','x','p','m','K','z','E','C',
+	  'u','J','q','6','7','z','C','r','X','E','T','2','E','g','s','P',
+	  'K','C','O','e','c','Z','/','j','c','x','+','1','n','A','h','s','='};
   
+  wg_key_b64_string pukey = {'v','8','L','p','Z','m','2','y','q','I','X',
+	  'i','s','8','9','2','C','M','j','q','C','3','D','I','R','Y','Z',
+	  't','J','7','t','S','V','4','I','o','d','M','A','c','P','V','c','='};
+
+  wg_key_b64_string ppukey = {'s','u','C','E','y','8','u','4','r','x','y',
+	  'd','5','2','3','h','C','o','0','m','q','+','u','L','7','p','n',
+	  '8','M','w','K','s','p','L','w','H','q','B','C','J','r','S','A','='};
+
   wg_peer new_peer = {
 	.flags = (wg_peer_flags) (WGPEER_HAS_PUBLIC_KEY | WGPEER_REPLACE_ALLOWEDIPS),
 	.endpoint = e
   };
-  wg_key_from_base64(new_peer.public_key, pkey); 
+  wg_key_from_base64(new_peer.public_key, ppukey); 
   wg_key_from_base64(new_peer.preshared_key,pskey); 
 
   wg_device new_device = {
@@ -199,21 +203,21 @@ int main(int argc, char** argv) {
 	.first_peer = &new_peer,
 	.last_peer = &new_peer
   };
+  wg_key_from_base64(new_device.public_key, pukey);
+  wg_key_from_base64(new_device.private_key, prkey);
 
 /*  
   wg_key temp_private_key;
   wg_generate_private_key(temp_private_key);
   wg_generate_public_key(new_peer.public_key, temp_private_key);
-*/
+
 
   wg_key_b64_string key, key2;
   wg_key_to_base64(key, new_peer.public_key);
- // printf("peer pub key %s\n", key);
   
   wg_generate_private_key(new_device.private_key);
   wg_key_to_base64(key2, new_device.private_key);
- // printf("device pri key %s\n", key2);
-  
+*/  
   if (wg_add_device(new_device.name) < 0) {
 	perror("Unable to add device");
 	exit(1);
