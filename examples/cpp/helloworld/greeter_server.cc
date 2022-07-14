@@ -36,6 +36,7 @@ extern "C" {
 #include "helloworld.grpc.pb.h"
 #endif
 
+std::string device_name = "wgtest0s";
 using grpc::Server;
 using grpc::ServerBuilder;
 using grpc::ServerContext;
@@ -62,7 +63,7 @@ class GreeterServiceImpl final : public Greeter::Service {
 };
 
 void RunServer() {
-  std::string server_address("0.0.0.0:50051");
+  std::string server_address("192.168.33.1:50051");
   GreeterServiceImpl service;
 
   grpc::EnableDefaultHealthCheckService(true);
@@ -115,66 +116,108 @@ void list_devices(void)
 	free(device_names);
 }
 
+int check_device(const char * device_name_to_check) {
+	char *device_names, *device_name;
+	size_t len;
+
+	device_names = wg_list_device_names();
+	if (!device_names) {
+		perror("Unable to get device names");
+		exit(1);
+	}
+
+	wg_for_each_device_name(device_names, device_name, len) {
+        if (strcmp(device_name, device_name_to_check) == 0) 
+            return 1;
+    }
+    return 0;
+}
+
 int main(int argc, char** argv) {
 
-  wg_key_b64_string pskey = {'2','3','/','3','x','p','m','K',
-	  	'z','E','C','u','J','q','6','7','z','C','r','X','E','T','2',
-		'E','g','s','P','K','C','O','e','c','Z','/','j','c','x','+',
-		'1','n','A','h','s','='};
-  wg_key_b64_string prkey = {'+','K','v','1','R','d','7','S','T','G','S','G',
-	  'F','j','C','y','2','J','/','e','Z','X','U','s','L','S','u','7',
-	  'N','K','O','q','O','U','c','w','e','C','P','8','i','k','s','='};
-  
-  wg_key_b64_string pukey = {'s','u','C','E','y','8','u','4','r','x','y','d',
-	  '5','2','3','h','C','o','0','m','q','+','u','L','7','p','n','8','M',
-	  'w','K','s','p','L','w','H','q','B','C','J','r','S','A','='};
-  
-  wg_key_b64_string ppukey = {'v','8','L','p','Z','m','2','y','q','I','X','i',
-	  's','8','9','2','C','M','j','q','C','3','D','I','R','Y','Z','t','J',
-	  '7','t','S','V','4','I','o','d','M','A','c','P','V','c','='};
- 	
-  wg_peer new_peer = {
-	.flags = (wg_peer_flags) (WGPEER_HAS_PUBLIC_KEY | WGPEER_REPLACE_ALLOWEDIPS)
-  };
-  wg_key_from_base64(new_peer.public_key, ppukey);
-  wg_key_from_base64(new_peer.preshared_key,pskey);
+    wg_key_b64_string pskey = {'2','3','/','3','x','p','m','K',
+        'z','E','C','u','J','q','6','7','z','C','r','X','E','T','2',
+        'E','g','s','P','K','C','O','e','c','Z','/','j','c','x','+',
+        '1','n','A','h','s','='};
 
-  
-  wg_device new_device = {
-        .name = "wgtest0s",
+    wg_key_b64_string prkey = {'+','K','v','1','R','d','7','S','T','G','S','G',
+        'F','j','C','y','2','J','/','e','Z','X','U','s','L','S','u','7',
+        'N','K','O','q','O','U','c','w','e','C','P','8','i','k','s','='};
+
+    wg_key_b64_string pukey = {'s','u','C','E','y','8','u','4','r','x','y','d',
+        '5','2','3','h','C','o','0','m','q','+','u','L','7','p','n','8','M',
+        'w','K','s','p','L','w','H','q','B','C','J','r','S','A','='};
+
+    wg_key_b64_string ppukey = {'v','8','L','p','Z','m','2','y','q','I','X','i',
+        's','8','9','2','C','M','j','q','C','3','D','I','R','Y','Z','t','J',
+        '7','t','S','V','4','I','o','d','M','A','c','P','V','c','='};
+
+    wg_endpoint e;
+    struct sockaddr_in addr;
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(50055);
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    e.addr4 = addr;
+
+    wg_peer new_peer = {
+        .flags = (wg_peer_flags) (WGPEER_HAS_PUBLIC_KEY | WGPEER_REPLACE_ALLOWEDIPS),
+        .endpoint = e
+    };
+    wg_key_from_base64(new_peer.public_key, ppukey);
+    wg_key_from_base64(new_peer.preshared_key,pskey);
+
+
+    /*
+    wg_device new_device = {
+        .name = device_name,
         .flags = (wg_device_flags)(WGDEVICE_HAS_PRIVATE_KEY | WGDEVICE_HAS_LISTEN_PORT),
         .listen_port = 12345,
         .first_peer = &new_peer,
         .last_peer = &new_peer
-  };
-  wg_key_from_base64(new_device.public_key, pukey);
-  wg_key_from_base64(new_device.private_key, prkey);
-	  
-  /*
-  wg_key temp_private_key;
-  wg_generate_private_key(temp_private_key);
-  wg_generate_public_key(new_peer.public_key, temp_private_key);
-  wg_generate_private_key(new_device.private_key);
-  */
+    };
+    */
+    wg_device new_device;
 
-  if (wg_add_device(new_device.name) < 0) {
-	perror("Unable to add device");
-	exit(1);
-  }
+    strcpy(new_device.name, device_name.c_str());
+    new_device.flags = (wg_device_flags)(WGDEVICE_HAS_PRIVATE_KEY | WGDEVICE_HAS_LISTEN_PORT);
+    new_device.listen_port = 12345;
+    new_device.first_peer = &new_peer;
+    new_device.last_peer = &new_peer;
+    wg_key_from_base64(new_device.public_key, pukey);
+    wg_key_from_base64(new_device.private_key, prkey);
 
-  if (wg_set_device(&new_device) < 0) {
-        perror("Unable to set device");
-	exit(1);
-  }
+    /*
+       wg_key temp_private_key;
+       wg_generate_private_key(temp_private_key);
+       wg_generate_public_key(new_peer.public_key, temp_private_key);
+       wg_generate_private_key(new_device.private_key);
+       */
 
-  list_devices();
+    int device_exists = check_device(device_name.c_str());
 
-  if (wg_del_device(new_device.name) < 0) {
-	perror("Unable to delete device");
-	exit(1);
-  }
+    if (!device_exists) {
+        if (wg_add_device(new_device.name) < 0) {
+            perror("Unable to add device");
+            exit(1);
+        }
 
-  RunServer();
+        if (wg_set_device(&new_device) < 0) {
+            perror("Unable to set device");
+            exit(1);
+        }
+        printf("got ifindex = %d", new_device.ifindex);
+    }
 
-  return 0;
+    list_devices();
+
+    /*
+       if (wg_del_device(new_device.name) < 0) {
+       perror("Unable to delete device");
+       exit(1);
+       }
+       */
+
+    RunServer();
+
+    return 0;
 }
