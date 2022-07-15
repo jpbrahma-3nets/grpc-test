@@ -227,7 +227,7 @@ int main(int argc, char** argv) {
     wg_device new_device;
     strcpy(new_device.name, device_name.c_str());
     new_device.flags = (wg_device_flags)(WGDEVICE_HAS_PRIVATE_KEY | WGDEVICE_HAS_LISTEN_PORT),
-    new_device.listen_port = 12345;
+    new_device.listen_port = 12346;
     new_device.first_peer = &new_peer;
     new_device.last_peer = &new_peer;
     new_device.ifindex = 11;
