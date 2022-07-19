@@ -29,6 +29,7 @@ extern "C"{
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <arpa/inet.h>
 
 #ifdef BAZEL_BUILD
 #include "examples/protos/helloworld.grpc.pb.h"
@@ -132,16 +133,16 @@ void list_devices(void)
 }
 
 int check_device(const char * device_name_to_check) {
-	char *device_names, *device_name;
-	size_t len;
+    char *device_names, *device_name;
+    size_t len;
 
-	device_names = wg_list_device_names();
-	if (!device_names) {
-		perror("Unable to get device names");
-		exit(1);
-	}
+    device_names = wg_list_device_names();
+    if (!device_names) {
+        perror("Unable to get device names");
+        exit(1);
+    }
 
-	wg_for_each_device_name(device_names, device_name, len) {
+    wg_for_each_device_name(device_names, device_name, len) {
         if (strcmp(device_name, device_name_to_check) == 0) 
             return 1;
     }
@@ -185,12 +186,22 @@ int main(int argc, char** argv) {
     reply = greeter.SayHelloAgain(user);
     std::cout << "Greeter received: " << reply << std::endl;
 
+
+
+    //Wireguard code
     wg_endpoint e;
     struct sockaddr_in addr;
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(50051);
-    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    addr.sin_port = htons(12345);
+    // 45.77.100.188 0x2d4d6464
+    addr.sin_addr.s_addr = htonl(0x2d4d6464); //INADDR_LOOPBACK);
     e.addr4 = addr;
+
+    //allowed ip
+    wg_allowedip allowedip;
+    allowedip.family = AF_INET;
+    inet_aton("192.168.44.1", &allowedip.ip4);
+    allowedip.cidr = 31;
 
     wg_key_b64_string prkey = {'s','J','l','H','Y','f','9','E','J','k','a','S',
         'S','u','X','f','Z','a','s','g','S','T','T','9','r','R','X','j','W',
@@ -209,8 +220,10 @@ int main(int argc, char** argv) {
         '8','M','w','K','s','p','L','w','H','q','B','C','J','r','S','A','='};
 
     wg_peer new_peer = {
-        .flags = (wg_peer_flags) (WGPEER_HAS_PUBLIC_KEY | WGPEER_REPLACE_ALLOWEDIPS),
-        .endpoint = e
+        .flags = (wg_peer_flags) (WGPEER_HAS_PUBLIC_KEY | WGPEER_REPLACE_ALLOWEDIPS | WGPEER_HAS_PRESHARED_KEY),
+	.first_allowedip = &allowedip,
+	.last_allowedip = &allowedip,
+        //.endpoint = e
     };
     wg_key_from_base64(new_peer.public_key, ppukey); 
     wg_key_from_base64(new_peer.preshared_key,pskey); 
@@ -274,3 +287,5 @@ int main(int argc, char** argv) {
        */
     return 0;
 }
+
+
