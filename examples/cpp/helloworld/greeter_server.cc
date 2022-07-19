@@ -24,6 +24,7 @@ extern "C" {
   #include "wireguard.h"
   #include <netinet/in.h>
   #include <sys/socket.h>
+  #include <arpa/inet.h>
 }
 
 #include <grpcpp/ext/proto_server_reflection_plugin.h>
@@ -155,13 +156,23 @@ int main(int argc, char** argv) {
     wg_endpoint e;
     struct sockaddr_in addr;
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(50055);
-    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    addr.sin_port = htons(12346);
+    // 192.168.143.212 0xc0a88fd4
+    addr.sin_addr.s_addr = htonl(0x2d4d64bc); //INADDR_LOOPBACK);
     e.addr4 = addr;
 
+    //allowed ip
+    wg_allowedip allowedip;
+    allowedip.family = AF_INET;
+   inet_aton("192.168.44.2", &allowedip.ip4);
+    allowedip.cidr = 31;
+
+
     wg_peer new_peer = {
-        .flags = (wg_peer_flags) (WGPEER_HAS_PUBLIC_KEY | WGPEER_REPLACE_ALLOWEDIPS),
-        .endpoint = e
+        .flags = (wg_peer_flags) (WGPEER_HAS_PUBLIC_KEY | WGPEER_REPLACE_ALLOWEDIPS | WGPEER_HAS_PRESHARED_KEY),
+        .endpoint = e,
+        .first_allowedip = &allowedip,
+        .last_allowedip = &allowedip,
     };
     wg_key_from_base64(new_peer.public_key, ppukey);
     wg_key_from_base64(new_peer.preshared_key,pskey);
