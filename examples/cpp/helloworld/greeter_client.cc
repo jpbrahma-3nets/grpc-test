@@ -29,6 +29,7 @@ extern "C"{
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <arpa/inet.h>
 
 #ifdef BAZEL_BUILD
 #include "examples/protos/helloworld.grpc.pb.h"
@@ -132,16 +133,16 @@ void list_devices(void)
 }
 
 int check_device(const char * device_name_to_check) {
-	char *device_names, *device_name;
-	size_t len;
+    char *device_names, *device_name;
+    size_t len;
 
-	device_names = wg_list_device_names();
-	if (!device_names) {
-		perror("Unable to get device names");
-		exit(1);
-	}
+    device_names = wg_list_device_names();
+    if (!device_names) {
+        perror("Unable to get device names");
+        exit(1);
+    }
 
-	wg_for_each_device_name(device_names, device_name, len) {
+    wg_for_each_device_name(device_names, device_name, len) {
         if (strcmp(device_name, device_name_to_check) == 0) 
             return 1;
     }
@@ -185,12 +186,21 @@ int main(int argc, char** argv) {
     reply = greeter.SayHelloAgain(user);
     std::cout << "Greeter received: " << reply << std::endl;
 
+
+
+    //Wireguard code
     wg_endpoint e;
     struct sockaddr_in addr;
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(50051);
-    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    addr.sin_port = htons(12345);
+    inet_aton("5.161.133.68", &addr.sin_addr);
     e.addr4 = addr;
+
+    //allowed ip
+    wg_allowedip allowedip;
+    allowedip.family = AF_INET;
+    inet_aton("0.0.0.0", &allowedip.ip4);
+    allowedip.cidr = 0;
 
     wg_key_b64_string prkey = {'s','J','l','H','Y','f','9','E','J','k','a','S',
         'S','u','X','f','Z','a','s','g','S','T','T','9','r','R','X','j','W',
@@ -209,21 +219,18 @@ int main(int argc, char** argv) {
         '8','M','w','K','s','p','L','w','H','q','B','C','J','r','S','A','='};
 
     wg_peer new_peer = {
-        .flags = (wg_peer_flags) (WGPEER_HAS_PUBLIC_KEY | WGPEER_REPLACE_ALLOWEDIPS),
+        .flags = (wg_peer_flags) (WGPEER_HAS_PUBLIC_KEY |
+		       	WGPEER_REPLACE_ALLOWEDIPS |
+		       	WGPEER_HAS_PRESHARED_KEY |
+			WGPEER_HAS_PERSISTENT_KEEPALIVE_INTERVAL),
+	.persistent_keepalive_interval = 10,
+	.first_allowedip = &allowedip,
+	.last_allowedip = &allowedip,
         .endpoint = e
     };
     wg_key_from_base64(new_peer.public_key, ppukey); 
     wg_key_from_base64(new_peer.preshared_key,pskey); 
 
-    /*
-    wg_device new_device = {
-        .name = "wgtest0",
-        .flags = (wg_device_flags)(WGDEVICE_HAS_PRIVATE_KEY | WGDEVICE_HAS_LISTEN_PORT),
-        .listen_port = 12345,
-        .first_peer = &new_peer,
-        .last_peer = &new_peer
-    };
-    */
     wg_device new_device;
     strcpy(new_device.name, device_name.c_str());
     new_device.flags = (wg_device_flags)(WGDEVICE_HAS_PRIVATE_KEY | WGDEVICE_HAS_LISTEN_PORT),
@@ -274,3 +281,5 @@ int main(int argc, char** argv) {
        */
     return 0;
 }
+
+
