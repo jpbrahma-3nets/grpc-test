@@ -200,8 +200,9 @@ int main(int argc, char** argv) {
     //allowed ip
     wg_allowedip allowedip;
     allowedip.family = AF_INET;
-    inet_aton("192.168.44.1", &allowedip.ip4);
-    allowedip.cidr = 31;
+    //inet_aton("192.168.44.1", &allowedip.ip4);
+    inet_aton("0.0.0.0", &allowedip.ip4);
+    allowedip.cidr = 0;
 
     wg_key_b64_string prkey = {'s','J','l','H','Y','f','9','E','J','k','a','S',
         'S','u','X','f','Z','a','s','g','S','T','T','9','r','R','X','j','W',
@@ -220,7 +221,11 @@ int main(int argc, char** argv) {
         '8','M','w','K','s','p','L','w','H','q','B','C','J','r','S','A','='};
 
     wg_peer new_peer = {
-        .flags = (wg_peer_flags) (WGPEER_HAS_PUBLIC_KEY | WGPEER_REPLACE_ALLOWEDIPS | WGPEER_HAS_PRESHARED_KEY),
+        .flags = (wg_peer_flags) (WGPEER_HAS_PUBLIC_KEY |
+		       	WGPEER_REPLACE_ALLOWEDIPS |
+		       	WGPEER_HAS_PRESHARED_KEY |
+			WGPEER_HAS_PERSISTENT_KEEPALIVE_INTERVAL),
+	.persistent_keepalive_interval = 10,
 	.first_allowedip = &allowedip,
 	.last_allowedip = &allowedip,
         //.endpoint = e
