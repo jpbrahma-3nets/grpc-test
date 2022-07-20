@@ -164,13 +164,18 @@ int main(int argc, char** argv) {
     //allowed ip
     wg_allowedip allowedip;
     allowedip.family = AF_INET;
-   inet_aton("192.168.44.2", &allowedip.ip4);
-    allowedip.cidr = 31;
+    //inet_aton("192.168.44.2", &allowedip.ip4);
+    inet_aton("0.0.0.0", &allowedip.ip4);
+    allowedip.cidr = 0;
 
 
     wg_peer new_peer = {
-        .flags = (wg_peer_flags) (WGPEER_HAS_PUBLIC_KEY | WGPEER_REPLACE_ALLOWEDIPS | WGPEER_HAS_PRESHARED_KEY),
+        .flags = (wg_peer_flags) (WGPEER_HAS_PUBLIC_KEY |
+                WGPEER_REPLACE_ALLOWEDIPS |
+                WGPEER_HAS_PRESHARED_KEY |
+                WGPEER_HAS_PERSISTENT_KEEPALIVE_INTERVAL),
         .endpoint = e,
+        .persistent_keepalive_interval = 10,
         .first_allowedip = &allowedip,
         .last_allowedip = &allowedip,
     };
