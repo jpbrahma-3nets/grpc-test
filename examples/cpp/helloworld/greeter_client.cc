@@ -223,10 +223,10 @@ int main(int argc, char** argv) {
 		       	WGPEER_REPLACE_ALLOWEDIPS |
 		       	WGPEER_HAS_PRESHARED_KEY |
 			WGPEER_HAS_PERSISTENT_KEEPALIVE_INTERVAL),
+        .endpoint = e,
 	.persistent_keepalive_interval = 10,
 	.first_allowedip = &allowedip,
 	.last_allowedip = &allowedip,
-        .endpoint = e
     };
     wg_key_from_base64(new_peer.public_key, ppukey); 
     wg_key_from_base64(new_peer.preshared_key,pskey); 
