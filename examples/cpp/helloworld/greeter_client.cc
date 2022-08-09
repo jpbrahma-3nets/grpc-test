@@ -123,6 +123,7 @@ void list_devices(void)
             printf("%s has public key %s\n", device_name, key);
         } else
             printf("%s has no public key\n", device_name);
+
         wg_for_each_peer(device, peer) {
             wg_key_to_base64(key, peer->public_key);
             printf(" - peer %s\n", key);
@@ -186,8 +187,6 @@ int main(int argc, char** argv) {
     reply = greeter.SayHelloAgain(user);
     std::cout << "Greeter received: " << reply << std::endl;
 
-
-
     //Wireguard code
     wg_endpoint e;
     struct sockaddr_in addr;
@@ -219,14 +218,14 @@ int main(int argc, char** argv) {
         '8','M','w','K','s','p','L','w','H','q','B','C','J','r','S','A','='};
 
     wg_peer new_peer = {
-        .flags = (wg_peer_flags) (WGPEER_HAS_PUBLIC_KEY |
-		       	WGPEER_REPLACE_ALLOWEDIPS |
-		       	WGPEER_HAS_PRESHARED_KEY |
-			WGPEER_HAS_PERSISTENT_KEEPALIVE_INTERVAL),
-        .endpoint = e,
-	.persistent_keepalive_interval = 10,
-	.first_allowedip = &allowedip,
-	.last_allowedip = &allowedip,
+	    .flags = (wg_peer_flags) (WGPEER_HAS_PUBLIC_KEY |
+			    WGPEER_REPLACE_ALLOWEDIPS |
+			    WGPEER_HAS_PRESHARED_KEY |
+			    WGPEER_HAS_PERSISTENT_KEEPALIVE_INTERVAL),
+	    .endpoint = e,
+	    .persistent_keepalive_interval = 10,
+	    .first_allowedip = &allowedip,
+	    .last_allowedip = &allowedip,
     };
     wg_key_from_base64(new_peer.public_key, ppukey); 
     wg_key_from_base64(new_peer.preshared_key,pskey); 
@@ -257,7 +256,7 @@ int main(int argc, char** argv) {
 
 
     int device_exists = check_device(device_name.c_str());
-
+    printf("%s device exists = %d\n", new_device.name, device_exists);
     if (!device_exists) {
         if (wg_add_device(new_device.name) < 0) {
             perror("Unable to add device");
@@ -269,6 +268,24 @@ int main(int argc, char** argv) {
             exit(1);
         }
         printf("got ifindex = %d", new_device.ifindex);
+    } else {
+        if (wg_del_device(new_device.name) < 0) {
+            perror("Unable to delete device");
+            exit(1);
+        }
+	printf("device deleted\n");
+
+        if (wg_add_device(new_device.name) < 0) {
+            perror("Unable to add device");
+            exit(1);
+        }
+
+        if (wg_set_device(&new_device) < 0) {
+            perror("Unable to set device");
+            exit(1);
+        }
+        printf("got ifindex = %d", new_device.ifindex);
+
     }
 
     list_devices();
